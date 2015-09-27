@@ -36,7 +36,7 @@ features_names<-read.table("./UCI HAR Dataset/features.txt")
 colnames(X_test)<-features_names$V2
 X_test$Id <-c(1:2947)
 
-#Adding data to the existing dat_test
+#Adding subject, activity and features data to the existing dat_test
 dat_test[,"subject"]<-subject_test
 dat_test[,"activity"]<-y_test
 data_test<-merge(dat_test,X_test,by.x="Id",by.y="Id")
@@ -53,7 +53,7 @@ total_acc_y_test<-read.table("./UCI HAR Dataset/test/Inertial Signals/total_acc_
 total_acc_z_test<-read.table("./UCI HAR Dataset/test/Inertial Signals/total_acc_z_test.txt")
 
 
-##introduce proper names for columns in Inertial Signals data frames - before merging them into the data_test
+##introduce unique names for columns in Inertial Signals dataframes - before merging them into the data_test
 ##Creating a vector of names of (9*)128 readouts in test/Inertial Signals dataframes
 rawnames<-rep(1:1152)
 for(i in rawnames){
@@ -105,6 +105,7 @@ data_test<-merge(data_test,total_acc_z_test,by.x="Id",by.y="Id")
 ####!!!!!!!!!!!!!!!TRAIN-PART!!!!!!!!!!!!!!!!!!!!!##################
 ####################################################################
 
+#This part has the necessary analogous steps as the "Test" part. 
 #Reading the train data from the folder
 subject_train<-read.table("./UCI HAR Dataset/train/subject_train.txt")
 y_train<-read.table("./UCI HAR Dataset/train/y_train.txt")
@@ -112,14 +113,14 @@ X_train<-read.table("./UCI HAR Dataset/train/X_train.txt")
 
 #you can double-check number of records by dim(), in this case it is 7352.
 
-#Creating the data frame for train
+#Creating the data frame for training data. 
 dat_train<-data.frame(Id=1:7352,Source="training")
 
 #Adding proper feature names to feature dataframe 
 colnames(X_train)<-features_names$V2
 X_train$Id <-c(1:7352)
 
-#combining Id, Source, subject, activity and features for train data
+#combining Id, Source, subject, activity and features for training data
 dat_train[,"subject"]<-subject_train
 dat_train[,"activity"]<-y_train
 data_train<-merge(dat_train,X_train,by.x="Id",by.y="Id")
@@ -135,7 +136,7 @@ total_acc_x_train<-read.table("./UCI HAR Dataset/train/Inertial Signals/total_ac
 total_acc_y_train<-read.table("./UCI HAR Dataset/train/Inertial Signals/total_acc_y_train.txt")
 total_acc_z_train<-read.table("./UCI HAR Dataset/train/Inertial Signals/total_acc_z_train.txt")
 
-##introduce proper names for columns in those data frames - before merging them into the data_train
+##introduce unique names for columns in those raw data dataframes - before merging them into the data_train
 ##Creating a vector of names of (9*)128 readouts in train/Inertial Signals dataframes
 
 #Renaming the columns in test/Inertial Signals dataframes, to have unique colnames
@@ -173,21 +174,17 @@ data_train<-merge(data_train,total_acc_z_train,by.x="Id",by.y="Id")
 
 
 ##################################################################
-#COMBINING TWO TESTING WITH TRAINING 
+#COMBINING TESTING WITH TRAINING 
 ##################################################################
 
-#This is the data frame with full data in it. 
+#This is the merged dataframe with full data in it: 
 run_data<-rbind(data_test,data_train)
 
-#Selecting only mean and std from features' names
-#for (i in 1:length(values))
-#vector <- c(vector, values[i])
+################################################################################################################
+#Selecting variables: means and standard deviations from feature variables, plus Id, Source, subject, activity.
+################################################################################################################
 
-##################################################################
-#Selecting only means and standard deviations
-##################################################################
-
-#Selecting the variable names to choose
+#Selecting the variable names to choose - looking for means and std in features_names
 vec_names<-as.character(features_names$V2)
 #selected<-as.character(vector())
 sel<-vector()
@@ -199,9 +196,11 @@ for (i in 1:length(vec_names)){
        sel<-c(sel,i+4)}
 }
 sel_col<-c(c(1,2,3,4),sel)
+
+#This is the dataframe with selected mean & std variables
 run_data_selected<-select(run_data,sel_col)
 
-#Changing the activity into proper names
+#Changing the activity integers into proper names, which are:
 #1 WALKING
 #2 WALKING_UPSTAIRS
 #3 WALKING_DOWNSTAIRS
@@ -219,12 +218,15 @@ run_data_selected$activity[run_data_selected$activity=="4"]<-"Sitting"
 run_data_selected$activity[run_data_selected$activity=="5"]<-"Standing"
 run_data_selected$activity[run_data_selected$activity=="6"]<-"Laying"
 
+#################################################################
 #Grouping the data frame by subject and activity, into a new data frame 
 run_data_grouped<-group_by(run_data_selected,subject,activity)
 
+#################################################################
 #Summarizing the grouped dataframe - obtaining avarage of all variables for each subject and each activity
 run_data_summ<-summarise_each(run_data_grouped,mean,-(Id:activity))
 
+#################################################################
 #writing the data into txt file
 write.table(run_data_summ,"run_data_summary.txt",sep="\t",row.name=FALSE)
-
+#################################################################
